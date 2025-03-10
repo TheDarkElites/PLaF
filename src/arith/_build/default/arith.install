@@ -1,0 +1,23 @@
+lib: [
+  "_build/install/default/lib/arith/META"
+  "_build/install/default/lib/arith/arith.a"
+  "_build/install/default/lib/arith/arith.cma"
+  "_build/install/default/lib/arith/arith.cmi"
+  "_build/install/default/lib/arith/arith.cmt"
+  "_build/install/default/lib/arith/arith.cmx"
+  "_build/install/default/lib/arith/arith.cmxa"
+  "_build/install/default/lib/arith/arith.ml"
+  "_build/install/default/lib/arith/arith__Ds.cmi"
+  "_build/install/default/lib/arith/arith__Ds.cmt"
+  "_build/install/default/lib/arith/arith__Ds.cmx"
+  "_build/install/default/lib/arith/arith__Interp.cmi"
+  "_build/install/default/lib/arith/arith__Interp.cmt"
+  "_build/install/default/lib/arith/arith__Interp.cmx"
+  "_build/install/default/lib/arith/ds.ml"
+  "_build/install/default/lib/arith/dune-package"
+  "_build/install/default/lib/arith/interp.ml"
+  "_build/install/default/lib/arith/opam"
+]
+libexec: [
+  "_build/install/default/lib/arith/arith.cmxs"
+]
