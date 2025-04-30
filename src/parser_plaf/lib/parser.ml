@@ -1,4 +1,4 @@
-open Lexing
+t addopen Lexing
 open Printf
 open Ast
 module E = MenhirLib.ErrorReports

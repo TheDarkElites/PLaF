@@ -1,8 +1,18 @@
+(*
+George K Oliynyk and Sameer Sethuram
+I pledge my Honor that I have abided by the Stevens Honor System
+*)
 open Ds
 open Parser_plaf.Ast
 open Parser_plaf.Parser
     
 let g_store = Store.empty_store 20 (NumVal 0)
+
+let rec addIds fs evs =
+  match fs , evs with
+  | [],[] -> []
+  | (id,(is_mutable, _))::t1, v::t2 -> (id,(is_mutable, v)):: addIds t1 t2
+  | _,_ -> failwith "error : lists have different sizes"
 
 let rec eval_expr : expr -> exp_val ea_result = fun e ->
   match e with
@@ -92,12 +102,66 @@ let rec eval_expr : expr -> exp_val ea_result = fun e ->
     sequence (List.map eval_expr es) >>= fun l ->
     return (List.hd (List.rev l))
   | Unit -> return UnitVal
+  | IsNumber (e) ->
+    eval_expr e >>= fun value ->
+    (match value with
+    | NumVal _ -> return (BoolVal true)
+    | _ -> return (BoolVal false))
+  | IsEqual (e1 , e2) -> (* check that evaluation of e1 , e2 are NumVals *)
+    eval_expr e1 >>=
+    int_of_numVal >>= fun numval1 ->
+    eval_expr e2 >>=
+    int_of_numVal >>= fun numval2 ->
+    return @@ (BoolVal (numval1 = numval2))
+  | IsGT (e1, e2) -> (* check that evaluation of e1 , e2 are NumVals *)
+    eval_expr e1 >>=
+    int_of_numVal >>= fun numval1 ->
+    eval_expr e2 >>=
+    int_of_numVal >>= fun numval2 ->
+    return @@ (BoolVal (numval1 > numval2))
+  | IsLT (e1 ,e2 ) -> (* check that evaluation of e1 , e2 are NumVals *)
+    eval_expr e1 >>=
+    int_of_numVal >>= fun numval1 ->
+    eval_expr e2 >>=
+    int_of_numVal >>= fun numval2 ->
+    return @@ (BoolVal (numval1 < numval2))
+  | Record (fs) ->
+    sequence ( List.map process_field fs ) >>= fun evs ->
+    return ( RecordVal ( addIds fs evs ))
+  | Proj (e, id) ->
+    eval_expr e >>=
+    fields_of_recordVal >>= fun fs ->
+    (let rec helper valin =
+    (match valin with
+    | [] -> error "Record does not have that field!"
+    | (cid,(is_mutable,cval))::_ when cid = id -> if is_mutable then int_of_refVal cval >>= Store.deref g_store
+      else return @@ cval
+    | _::t -> helper t) in helper fs)
+  | SetField (e1 ,id ,e2) ->
+    eval_expr e1 >>=
+    fields_of_recordVal >>= fun fs ->
+    eval_expr e2 >>= fun newval ->
+    (let rec helper vi =
+    (match vi with
+     | [] -> error "Record does not have that field!"
+     | (cid,(is_mutable,e))::_ when cid = id ->
+     int_of_refVal e >>= fun rid ->
+     if is_mutable then Store.set_ref g_store rid newval >>= fun _ -> return UnitVal
+     else error "Field not mutable"
+     | _::t -> helper t
+    ) in helper fs)
   | Debug(_e) ->
     string_of_env >>= fun str_env ->
     let str_store = Store.string_of_store string_of_expval g_store 
     in (print_endline (str_env^"\n"^str_store);
     error "Reached breakpoint")
   | _ -> failwith ("Not implemented: "^string_of_expr e)
+and
+   process_field (id,(is_mutable,e)) =
+   eval_expr e >>= fun ev ->
+   if is_mutable
+   then return ( RefVal ( Store.new_ref g_store ev ))
+   else return ev
 
 let eval_prog (AProg(_,e)) =
   eval_expr e         
@@ -107,5 +171,12 @@ let interp (s:string) : exp_val result =
   let c = s |> parse |> eval_prog
   in run c
 
-
+(* Interpret an expression read from a file with optional extension . exr *)
+ let interpf (s:string) : exp_val result =
+  let s = String.trim s (* remove leading and trailing spaces *)
+  in let file_name = (* allow rec to be optional *)
+     match String.index_opt s '.' with
+     | None -> s^".exr"
+     | _ -> s
+  in interp @@ read_file file_name
 
